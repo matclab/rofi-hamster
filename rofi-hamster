@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+: "${CACHE_DIR:="$HOME/.cache/frece/"}"
+
+[[ -d $CACHE_DIR ]] || mkdir -p "$CACHE_DIR"
+CACHE="$CACHE_DIR"/hamster.db
+
+current=$(hamster current | sed 's|^[^ ]\+ [^ ]\+ \(.*\) [^ ]\+$|\1|' | sed 's|@Unsorted|@|')
+
+function activities() {
+   # Echo a reverse list of activities prefixed by date
+   # start=$1
+   # end=$2
+   if [[ $# -eq 0 ]]
+   then
+      start=$(date +%Y-%m-%d -d "2 years ago")
+      end=$(date +%Y-%m-%d)
+      shift
+   else 
+      start="$1"
+      end="$2"
+   fi
+   hamster export tsv "$start" "$end" \
+      | xsv select -d"\t" "heure de fin,activité,catégorie,description,étiquettes" \
+      | tail -n +2 \
+      | sed --regexp-extended -e '/^[^"]*",?$/d' \
+      | sed --regexp-extended -e s'/([0-9]{4}-[0-9]{2}-[0-9]{2}) [0-9]{2}:[0-9]{2} *//' \
+	    -e 's/,/ /' -e 's/,/@/' -e 's/[, ]([0-9]+)/ #\1/' -e 's/,?, *$//' \
+	    -e 's/, */,, /' -e 's/^ *//' \
+      | sort -u
+}
+
+function all_activities() {
+if [[ ! -e $CACHE ]] 
+then
+   frece init "$CACHE" <(activities "$(date +%Y-%m-%d -d "1 month ago")" "$(date +%Y-%m-%d)")
+   frece print "$CACHE"
+else
+   frece print "$CACHE"
+   frece update "$CACHE" <(activities "$(date +%Y-%m-%d -d "3 month ago")" "$(date +%Y-%m-%d)") --purge-old &
+fi
+}
+
+
+selectedfilter=$(all_activities  \
+   | rofi -dmenu -i -select "$current" -p "Select task" -format "s|f")
+
+selected=${selectedfilter/\|*/}
+filter=${selectedfilter/*\|/}
+
+[ -z "$selected" ] && exit
+
+if [ "$current" == "$selected" ]; then
+  hamster stop
+  dunstify -a "hamster" "Stop activity ${selected/,,/}"
+else
+  if [[ $filter =~ ^[A-Za-z].*[0-9-]$ ]] 
+  then
+     # Filter ends with time or duration → we keep filter
+     action="$filter"
+     item="$(echo "$action" | sed -e 's/ *,,.*//')"
+     if ! frece increment "$CACHE" "$item" 
+     then
+	 (frece add "$CACHE" "$item" 
+	 frece increment "$CACHE" "$item" )&
+     fi
+  else
+     action="$selected"
+     frece increment "$CACHE" "$action" &
+  fi
+  echo "$action"
+  hamster start "$action"
+  dunstify -a "hamster" "Start activity ${action/,,/}"
+fi
