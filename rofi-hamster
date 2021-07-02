@@ -51,7 +51,8 @@ filter=${selectedfilter/*\|/}
 
 [ -z "$selected" ] && exit
 
-if [ "$current" == "$selected" ]; then
+# if selected activity matches current we stop it
+if [[ "${selected/,,/} " =~ $current\  ]]; then
   hamster stop
   dunstify -a "hamster" "Stop activity ${selected/,,/}"
 else
