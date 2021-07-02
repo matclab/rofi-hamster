@@ -6,7 +6,7 @@ set -eo pipefail
 [[ -d $CACHE_DIR ]] || mkdir -p "$CACHE_DIR"
 CACHE="$CACHE_DIR"/hamster.db
 
-current=$(hamster current | sed 's|^[^ ]\+ [^ ]\+ \(.*\) [^ ]\+$|\1|' | sed 's|@Unsorted|@|')
+current=$(hamster current | sed 's|^[^ ]\+ [^ ]\+ \(.*\) [^ ]\+$|\1|' )
 
 function activities() {
    # Echo a reverse list of activities prefixed by date
