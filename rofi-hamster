@@ -6,10 +6,18 @@ set -eo pipefail
 [[ -d $CACHE_DIR ]] || mkdir -p "$CACHE_DIR"
 CACHE="$CACHE_DIR"/hamster.db
 
-current=$(hamster current | sed 's|^[^ ]\+ [^ ]\+ \(.*\) [^ ]\+$|\1|' )
+# To enable mocking in test
+: "${_ROFI:=rofi}"
+: "${_HAMSTER:=hamster}"
+: "${_DUNSTIFY:=dunstify}"
+: "${_XSV:=xsv}"
+: "${_FRECE:=frece}"
+: "${_TESTING:="no"}"
+
 
 function activities() {
    # Echo a reverse list of activities prefixed by date
+   # Activities follow the hamster start command format
    # start=$1
    # end=$2
    if [[ $# -eq 0 ]]
@@ -21,14 +29,24 @@ function activities() {
       start="$1"
       end="$2"
    fi
-   LC_ALL=C hamster export tsv "$start" "$end" \
-      | xsv select -d"\t" "end time,activity,category,description,tags" \
-      | tail -n +2 \
-      | sed --regexp-extended -e '/^[^"]*",?$/d' \
-      | sed --regexp-extended -e s'/([0-9]{4}-[0-9]{2}-[0-9]{2}) [0-9]{2}:[0-9]{2} *//' \
-	    -e 's/,/ /' -e 's/,/@/' -e 's/[, ]([0-9]+)/ #\1/' -e 's/,?, *$//' \
-	    -e 's/, */,, /' -e 's/^ *//' \
-      | sort -u
+   LC_ALL=C "$_HAMSTER" export tsv "$start" "$end" |
+      "$_XSV" select -d"\t" "activity,category,description,tags" |
+      tail -n +2 | # remove header line
+      # change 
+         #  gestion projet,c845,planning desc,145
+         #  gestion projet,c845,planning desc,"145, 246"
+      # into hamster start command
+         #  gestion projet@c845,planning desc #145
+         #  gestion projet@c845,planning desc #145 #246
+      sed --regexp-extended -e '/^[^"]*",?$/d' | #remove buggy lines like 'comment",'
+	 # separate activity and category with @
+	 # For line containing multiple tags and thus ending with ", add # before
+	 # tags remove coma and double quotes
+	 # For line with single tag add # before the tag
+	 # Replace last coma with space
+      sed --regexp-extended  -e 's/,/@/' -e '/"$/s/"/#/' -e '/"$/s/, / #/g' \
+         -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/,#\1/' -e 's/,*([^,]*)$/ \1/' |
+      sort -u
 }
 
 function all_activities() {
@@ -42,39 +60,48 @@ else
 fi
 }
 
+# To enable mocking in test
+: "${_all_activities:=all_activities}"
 
-selectedfilter=$(all_activities  \
-   | rofi -dmenu -i -select "$current" -p "Select task" -format "s|f")
+function main() {
+   current=$("$_HAMSTER" current | sed 's|^[^ ]\+ [^ ]\+ \(.*\) [^ ]\+$|\1|' )
+   selectedfilter=$("$_all_activities"  \
+      | "$_ROFI" -dmenu -i -select "$current" -p "Select task" -format "s|f")
 
-selected=${selectedfilter/\|*/}
-filter=${selectedfilter/*\|/}
+   selected=${selectedfilter/\|*/}
+   filter=${selectedfilter/*\|/}
+   [ -z "$selected" ] && exit
 
-[ -z "$selected" ] && exit
+   # if selected activity matches current we stop it
+   if [[ "${selected/,,/} " =~ $current\  ]]; then
+      "$_HAMSTER" stop
+      "$_DUNSTIFY" -a "hamster" "Stop activity ${selected/,,/}"
+   else
+      if [[ $filter =~ ^[A-Za-z].*[0-9-]$ ]] 
+      then
+	 # Filter ends with time or duration → we keep filter
+	 action="$filter"
+	 item="$(echo "$action" | sed --regexp-extended -e 's/ *,+[^,]*//')"
+	 if ! "$_FRECE" increment "$CACHE" "$item" 
+	 then
+	    ("$_FRECE" add "$CACHE" "$item" 
+	    "$_FRECE" increment "$CACHE" "$item" )&
+	 fi
+      else
 	 action="$selected"
 	 if ! "$_FRECE" increment "$CACHE" "$action"
 	 then
 	    ("$_FRECE" add "$CACHE" "$action" 
 	    "$_FRECE" increment "$CACHE" "$action" )&
 	 fi
+      fi
+      echo "$action"
+      "$_HAMSTER" start "$action"
+      "$_DUNSTIFY" -a "hamster" "Start activity ${action/,,/}"
+   fi
+}
 
-# if selected activity matches current we stop it
-if [[ "${selected/,,/} " =~ $current\  ]]; then
-  hamster stop
-  dunstify -a "hamster" "Stop activity ${selected/,,/}"
-else
-  if [[ $filter =~ ^[A-Za-z].*[0-9-]$ ]] 
-  then
-     # Filter ends with time or duration → we keep filter
-     action="$filter"
-     item="$(echo "$action" | sed -e 's/ *,,.*//')"
-     if ! frece increment "$CACHE" "$item" 
-     then
-	 (frece add "$CACHE" "$item" 
-	 frece increment "$CACHE" "$item" )&
-     fi
-  else
-  fi
-  echo "$action"
-  hamster start "$action"
-  dunstify -a "hamster" "Start activity ${action/,,/}"
+if [[ "$_TESTING" == "no" ]]
+then
+    main
 fi
