@@ -6,7 +6,7 @@ image:
 
 test:
    script:
-      - bats --formatter junit tests
+      - bats --formatter junit tests  > TestReport.xml
    artifacts:
       reports:
-         junit: TestReport*.xml
+         junit: TestReport.xml
