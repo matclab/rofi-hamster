@@ -46,7 +46,7 @@ function activities() {
 	 # Replace last coma with space
       sed --regexp-extended  -e 's/,/@/' -e '/"$/s/"/#/' -e '/"$/s/, / #/g' \
          -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/,#\1/' -e 's/,*([^,]*)$/ \1/' |
-      sort -u
+      LC_ALL=C sort -u
 }
 
 function all_activities() {
