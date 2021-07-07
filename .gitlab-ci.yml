@@ -1,0 +1,12 @@
+variables:
+   GIT_SUBMODULE_STRATEGY: recursive
+
+image:
+   name: registry.gitlab.com/matclab/rofi-hamster/rh-test:0.2
+
+test:
+   script:
+      - bats --formatter junit tests
+   artifacts:
+      reports:
+         junit: TestReport*.xml
