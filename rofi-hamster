@@ -50,6 +50,12 @@ selected=${selectedfilter/\|*/}
 filter=${selectedfilter/*\|/}
 
 [ -z "$selected" ] && exit
+	 action="$selected"
+	 if ! "$_FRECE" increment "$CACHE" "$action"
+	 then
+	    ("$_FRECE" add "$CACHE" "$action" 
+	    "$_FRECE" increment "$CACHE" "$action" )&
+	 fi
 
 # if selected activity matches current we stop it
 if [[ "${selected/,,/} " =~ $current\  ]]; then
@@ -67,8 +73,6 @@ else
 	 frece increment "$CACHE" "$item" )&
      fi
   else
-     action="$selected"
-     frece increment "$CACHE" "$action" &
   fi
   echo "$action"
   hamster start "$action"
