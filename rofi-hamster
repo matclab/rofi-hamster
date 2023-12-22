@@ -36,16 +36,17 @@ function activities() {
          #  gestion projet,c845,planning desc,145
          #  gestion projet,c845,planning desc,"145, 246"
       # into hamster start command
-         #  gestion projet@c845,planning desc #145
-         #  gestion projet@c845,planning desc #145 #246
+         #  gestion projet@c845,, planning desc #145
+         #  gestion projet@c845,, planning desc #145 #246
       sed --regexp-extended -e '/^[^"]*",?$/d' | #remove buggy lines like 'comment",'
 	 # separate activity and category with @
 	 # For line containing multiple tags and thus ending with ", add # before
 	 # tags remove coma and double quotes
 	 # For line with single tag add # before the tag
 	 # Replace last coma with space
-      sed --regexp-extended  -e 's/,/@/' -e '/"$/s/"/#/' -e '/"$/s/, / #/g' \
-         -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/,#\1/' -e 's/,*([^,]*)$/ \1/' |
+	 # double comma to separate comment 
+      sed --regexp-extended  -e 's/,/@/'  -e '/"$/s/"/#/' -e '/"$/s/, / #/g' \
+         -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/,#\1/' -e 's/,*([^,]*)$/ \1/' -e 's/,/,, /' |
       LC_ALL=C sort -u
 }
 
@@ -73,7 +74,7 @@ function main() {
    [ -z "$selected" ] && exit
 
    # if selected activity matches current we stop it
-   if [[ "${selected/,,/} " =~ $current\  ]]; then
+   if [[ "${selected} " =~ $current\  ]]; then
       "$_HAMSTER" stop
       "$_DUNSTIFY" -a "hamster" "Stop activity ${selected/,,/}"
    else
