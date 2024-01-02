@@ -15,7 +15,8 @@ trap clean_up_background EXIT HUP INT QUIT ABRT BUS PIPE TERM
 function send_current_activity() 
 {
    activity=$(hamster current | sed -e "s|^[^ ]\+ [^ ]\+ \([^,]*\)\(,.*\)\? \(.*\)$|\1 \3|" -e "s/  Aucune.*//")
-   qdbus i3.status.rs /CurrentHamsterActivity i3.status.rs.SetStatus "$activity" " " Info
+   qdbus rs.i3status /CurrentHamsterActivity rs.i3status.custom.SetText "$activity" ""
+   qdbus rs.i3status /CurrentHamsterActivity rs.i3status.custom.SetState info
    echo "$activity"
 }
 
@@ -27,7 +28,7 @@ function update() {
    do
       sleep 60
       elapsed=$(date +%H:%M -d "$done today + $minutes minute")
-      qdbus i3.status.rs /CurrentHamsterActivity i3.status.rs.SetStatus "$activity $elapsed" " " Info
+      qdbus rs.i3status /CurrentHamsterActivity rs.i3status.custom.SetText "$activity $elapsed" ""
       minutes=$((minutes + 1))
    done
 }
