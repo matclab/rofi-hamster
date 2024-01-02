@@ -14,7 +14,7 @@ trap clean_up_background EXIT HUP INT QUIT ABRT BUS PIPE TERM
 
 function send_current_activity() 
 {
-   activity=$(hamster current | sed -e "s|^[^ ]\+ [^ ]\+ \([^,]*\)\(,,.*\)\? \(.*\)$|\1 \3|" -e "s/  Aucune.*//")
+   activity=$(hamster current | sed -e "s|^[^ ]\+ [^ ]\+ \([^,]*\)\(,.*\)\? \(.*\)$|\1 \3|" -e "s/  Aucune.*//")
    qdbus i3.status.rs /CurrentHamsterActivity i3.status.rs.SetStatus "$activity" " " Info
    echo "$activity"
 }
