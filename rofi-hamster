@@ -18,6 +18,7 @@ CACHE="$CACHE_DIR"/hamster.db
 function activities() {
    # Echo a reverse list of activities prefixed by date
    # Activities follow the hamster start command format
+   # "activity@project,, descriptions , #tag1 #tag2"
    # start=$1
    # end=$2
    if [[ $# -eq 0 ]]
@@ -36,17 +37,20 @@ function activities() {
          #  gestion projet,c845,planning desc,145
          #  gestion projet,c845,planning desc,"145, 246"
       # into hamster start command
-         #  gestion projet@c845,, planning desc #145
-         #  gestion projet@c845,, planning desc #145 #246
+         #  gestion projet@c845, planning desc, #145
+         #  gestion projet@c845, planning desc, #145 #246
       sed --regexp-extended -e '/^[^"]*",?$/d' | #remove buggy lines like 'comment",'
 	 # separate activity and category with @
 	 # For line containing multiple tags and thus ending with ", add # before
 	 # tags remove coma and double quotes
 	 # For line with single tag add # before the tag
-	 # Replace last coma with space
-	 # double comma to separate comment 
+	 # Remove quotes
+	 # Replace double commas by signle on,e
+	 # Insert space after first quote
+	 # Remove coma at end of line
       sed --regexp-extended  -e 's/,/@/'  -e '/"$/s/"/#/' -e '/"$/s/, / #/g' \
-         -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/,#\1/' -e 's/,*([^,]*)$/ \1/' -e 's/,/,, /' |
+	 -e 's/"$//' -e '/,[^#]+$/s/,([^,]+)$/, #\1/' -e 's/"//g'  \
+	 -e s'/,,/,/g' -e s'/,([^ ])/, \1/g' -e s'/,$//'  |
       LC_ALL=C sort -u
 }
 
