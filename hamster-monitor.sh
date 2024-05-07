@@ -38,9 +38,9 @@ function update() {
       short_activity="$activity"
       if [[ "${#activity}" -ge 9 ]]
       then
-	 short_activity="$(echo "$activity" | cut -c 1-9)… $elapsed"
+	 short_activity="$(echo "$activity" | cut -c 1-9)…"
       fi
-      qdbus rs.i3status /CurrentHamsterActivity rs.i3status.custom.SetText "$activity $elapsed" "$short_activity"
+      qdbus rs.i3status /CurrentHamsterActivity rs.i3status.custom.SetText "$activity $elapsed" "$short_activity $elapsed"
       minutes=$((minutes + 1))
    done
 }
