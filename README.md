@@ -1,3 +1,5 @@
+[![](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/matclab/donate)
+
 # Rofi for Hamster Time Tracker
 Simple script using [rofi](https://github.com/davatorium/rofi) to change
 current activity, with a companion script to display the current activity in
